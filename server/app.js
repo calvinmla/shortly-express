@@ -78,18 +78,10 @@ app.post('/links',
 
 app.post('/signup',
   (req, res) => {
-    // return models.User.get(req.body.username)
-    //   .then(userData => {
-    //     res.redirect('/login');
-    //   })
-
     return models.Users.create(req.body)
       .then(user => {
         res.redirect('/');
       })
-      // .error(error => {
-      //   res.redirect('/signup');
-      // })
       // Check why we can use catch here
       .catch(error => {
         //res.status(201).send(user);
@@ -115,7 +107,6 @@ app.post('/login',
       .catch(error => {
         res.redirect('/login');
       });
-
   });
 
 /************************************************************/
