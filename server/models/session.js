@@ -35,6 +35,7 @@ class Sessions extends Model {
   get(options) {
     return super.get.call(this, options)
       .then(session => {
+        console.log('get session', session);
         if (!session || !session.userId) {
           return session;
         }
