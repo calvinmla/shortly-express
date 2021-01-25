@@ -15,20 +15,20 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// app.use(require('./middleware/cookieParser'));
-// app.use(Auth.createSession);
+app.use(require('./middleware/cookieParser'));
+app.use(Auth.createSession);
 
-app.get('/',
+app.get('/', Auth.verifySession,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/create',
+app.get('/create', Auth.verifySession,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/links',
+app.get('/links', Auth.verifySession,
   (req, res, next) => {
     models.Links.getAll()
       .then(links => {
@@ -39,7 +39,7 @@ app.get('/links',
       });
   });
 
-app.post('/links',
+app.post('/links', Auth.verifySession,
   (req, res, next) => {
     var url = req.body.url;
     if (!models.Links.isValidUrl(url)) {
@@ -83,38 +83,69 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 
-app.post('/login',
-  (req, res) => {
-    var attempted = req.body.password;
-    var username = req.body.username;
-    return models.Users.get({username})
-      .then(user => {
-        return models.Users.compare(attempted, user.password, user.salt);
-      })
-      .then(boolean => {
-        if (boolean) {
-          res.redirect('/');
-        } else {
-          throw ('Error');
-        }
-      })
-      .catch(error => {
-        res.redirect('/login');
-      });
-  });
+app.post('/login', (req, res, next) => {
+  var username = req.body.username;
+  var password = req.body.password;
 
-app.post('/signup',
-  (req, res) => {
-    return models.Users.create(req.body)
-      .then(user => {
-        res.redirect('/');
-      })
-      // Check why we can use catch here
-      .catch(error => {
-        //res.status(201).send(user);
-        res.redirect('/signup');
-      });
-  });
+  return models.Users.get({ username })
+    .then(user => {
+      if (!user || !models.Users.compare(password, user.password, user.salt)) {
+        throw new Error('Username and password do not match');
+      }
+      return models.Sessions.update({ hash: req.session.hash }, { userId: user.id });
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    })
+    .catch(() => {
+      res.redirect('/login');
+    });
+});
+
+app.get('/logout', (req, res, next) => {
+  return models.Sessions.delete({ hash: req.cookies.shortlyid })
+    .then(() => {
+      res.clearCookie('shortlyid');
+      res.redirect('/login');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    });
+});
+
+app.get('/signup', (req, res) => {
+  res.render('signup');
+});
+
+app.post('/signup', (req, res, next) => {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  return models.Users.get({ username })
+    .then(user => {
+      if (user) {
+        throw user;
+      }
+      return models.Users.create({ username, password });
+    })
+    .then(results => {
+      return models.Sessions.update({ hash: req.session.hash }, { userId: results.insertId });
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      // error is for a Promise reject
+      res.status(500).send(error);
+    })
+    .catch(user => {
+      // catch is for exceptions (aka throw)
+      res.redirect('/signup');
+    });
+});
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail

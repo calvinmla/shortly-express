@@ -1,12 +1,19 @@
 const parseCookies = (req, res, next) => {
-  if (req.headers.cookie) {
-    var cookieArray = req.headers.cookie.split('; ');
-    for (var i = 0; i < cookieArray.length; i++) {
-      var cookie = cookieArray[i];
-      cookie = cookie.split('=');
-      req.cookies[cookie[0]] = cookie[1];
+
+  let cookieString = req.get('Cookie') || '';
+
+  parsedCookies = cookieString.split('; ').reduce((cookies, cookie) => {
+    if (cookie.length) {
+      let index = cookie.indexOf('=');
+      let key = cookie.slice(0, index);
+      let token = cookie.slice(index + 1);
+      cookies[key] = token;
     }
-  }
+    return cookies;
+  }, {});
+
+  req.cookies = parsedCookies;
+
   next();
 };
 

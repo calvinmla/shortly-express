@@ -10,20 +10,19 @@ module.exports.createSession = (req, res, next) => {
       }
       return models.Sessions.get({ hash });
     })
-    .then(session => {
+    .tap(session => {
       if (!session) {
-        throw sessions;
+        throw session;
       }
-      return session;
     })
+    // initializes a new session
     .catch(() => {
       return models.Sessions.create()
         .then(results => {
-          return models.Sessions.get({id: results.insertId});
+          return models.Sessions.get({ id: results.insertId });
         })
-        .then(session => {
-          res.cookie('shortlyid, session.hash');
-          return session;
+        .tap(session => {
+          res.cookie('shortlyid', session.hash);
         });
     })
     .then(session => {
@@ -53,3 +52,10 @@ module.exports.createSession = (req, res, next) => {
 // Add additional authentication middleware functions below
 /************************************************************/
 
+module.exports.verifySession = (req, res, next) => {
+  if (!models.Sessions.isLoggedIn(req.session)) {
+    res.redirect('/login');
+  } else {
+    next();
+  }
+};
