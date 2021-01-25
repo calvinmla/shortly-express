@@ -15,7 +15,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-
+// app.use(require('./middleware/cookieParser'));
+// app.use(Auth.createSession);
 
 app.get('/',
   (req, res) => {
@@ -74,20 +75,13 @@ app.post('/links',
       });
   });
 
+/************************************************************/
+// Write your authentication routes here
+/************************************************************/
 
-
-app.post('/signup',
-  (req, res) => {
-    return models.Users.create(req.body)
-      .then(user => {
-        res.redirect('/');
-      })
-      // Check why we can use catch here
-      .catch(error => {
-        //res.status(201).send(user);
-        res.redirect('/signup');
-      });
-  });
+app.get('/login', (req, res) => {
+  res.render('login');
+});
 
 app.post('/login',
   (req, res) => {
@@ -109,11 +103,18 @@ app.post('/login',
       });
   });
 
-/************************************************************/
-// Write your authentication routes here
-/************************************************************/
-
-
+app.post('/signup',
+  (req, res) => {
+    return models.Users.create(req.body)
+      .then(user => {
+        res.redirect('/');
+      })
+      // Check why we can use catch here
+      .catch(error => {
+        //res.status(201).send(user);
+        res.redirect('/signup');
+      });
+  });
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail
